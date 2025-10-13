@@ -8,6 +8,7 @@ use LunaPress\Foundation\ServicePackage\ServicePackageMeta;
 use LunaPress\FoundationContracts\PackageMeta\IPackageMetaFactory;
 use LunaPress\FoundationContracts\PackageMeta\PackageMeta;
 use LunaPress\FoundationContracts\PackageMeta\PackageType;
+use ReflectionClass;
 
 defined('ABSPATH') || exit;
 
@@ -28,7 +29,7 @@ final readonly class PackageMetaFactory implements IPackageMetaFactory
     /** @return iterable<PackageMeta> */
     public function createAll(): iterable
     {
-        foreach (InstalledVersions::getAllRawData()[0]['versions'] ?? [] as $name => $info) {
+        foreach ($this->getInstalledPackages() as $name => $info) {
             $meta = $this->build($name, $info);
             if ($meta) {
                 yield $meta;
@@ -75,5 +76,24 @@ final readonly class PackageMetaFactory implements IPackageMetaFactory
             $name,
             $diAbsolute && is_file($diAbsolute) ? $diAbsolute : null,
         );
+    }
+
+    /**
+     * @return array<string, array>
+     */
+    private function getInstalledPackages(): array
+    {
+        $ref         = new ReflectionClass(InstalledVersions::class);
+        $composerDir = dirname($ref->getFileName());
+        $jsonFile    = $composerDir . '/installed.json';
+
+        if (!is_file($jsonFile)) {
+            return [];
+        }
+
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+        $data = json_decode(file_get_contents($jsonFile), true);
+
+        return array_column($data['packages'], null, 'name');
     }
 }
