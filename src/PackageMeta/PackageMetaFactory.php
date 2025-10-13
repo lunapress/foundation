@@ -8,7 +8,9 @@ use LunaPress\Foundation\ServicePackage\ServicePackageMeta;
 use LunaPress\FoundationContracts\PackageMeta\IPackageMetaFactory;
 use LunaPress\FoundationContracts\PackageMeta\PackageMeta;
 use LunaPress\FoundationContracts\PackageMeta\PackageType;
+use Override;
 use ReflectionClass;
+use ReflectionException;
 
 defined('ABSPATH') || exit;
 
@@ -22,21 +24,38 @@ final readonly class PackageMetaFactory implements IPackageMetaFactory
     public function __construct()
     {
         $this->map = [
-            PackageType::SERVICE->value => $this->makeService(...),
+            PackageType::SERVICE->value => $this->makeServicePackage(...),
         ];
     }
 
-    /** @return iterable<PackageMeta> */
-    public function createAll(): iterable
+    /**
+     * @inheritDoc
+     * @throws ReflectionException
+     */
+    #[Override]
+    public function createAll(array $autoLoaders = []): iterable
     {
-        foreach ($this->getInstalledPackages() as $name => $info) {
-            $meta = $this->build($name, $info);
-            if ($meta) {
-                yield $meta;
+        foreach ($autoLoaders as $loaderClass) {
+            $ref  = new ReflectionClass($loaderClass);
+            $json = dirname($ref->getFileName(), 2) . '/composer/installed.json';
+            if (!is_file($json)) {
+                continue;
+            }
+
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+            $data     = json_decode(file_get_contents($json), true);
+            $packages = array_column($data['packages'] ?? [], null, 'name');
+
+            foreach ($packages as $name => $info) {
+                $meta = $this->build($name, $info);
+                if ($meta) {
+                    yield $meta;
+                }
             }
         }
     }
 
+    #[Override]
     public function create(string $packageName): ?PackageMeta
     {
         $packages = InstalledVersions::getAllRawData()[0]['versions'] ?? [];
@@ -53,7 +72,7 @@ final readonly class PackageMetaFactory implements IPackageMetaFactory
         return $maker ? $maker($name, $info) : null;
     }
 
-    private function makeService(string $name, array $info): ?PackageMeta
+    private function makeServicePackage(string $name, array $info): ?PackageMeta
     {
         $baseDir = InstalledVersions::getInstallPath($name);
 
@@ -76,24 +95,5 @@ final readonly class PackageMetaFactory implements IPackageMetaFactory
             $name,
             $diAbsolute && is_file($diAbsolute) ? $diAbsolute : null,
         );
-    }
-
-    /**
-     * @return array<string, array>
-     */
-    private function getInstalledPackages(): array
-    {
-        $ref         = new ReflectionClass(InstalledVersions::class);
-        $composerDir = dirname($ref->getFileName());
-        $jsonFile    = $composerDir . '/installed.json';
-
-        if (!is_file($jsonFile)) {
-            return [];
-        }
-
-        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-        $data = json_decode(file_get_contents($jsonFile), true);
-
-        return array_column($data['packages'], null, 'name');
     }
 }
