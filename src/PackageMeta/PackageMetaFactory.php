@@ -61,13 +61,13 @@ final readonly class PackageMetaFactory implements IPackageMetaFactory
             return null;
         }
 
-        $config = $info['extra']['lunapress']['config'] ?? [];
+        $config = $info['extra']['lunapress'] ?? [];
 
         $diRelative = $config['di'] ?? null;
         if ($diRelative) {
             // remove ./ and possible leading characters /
             $diRelative = preg_replace('#^\.?/+#', '', $diRelative);
-            $diAbsolute = $baseDir . DIRECTORY_SEPARATOR . $diRelative;
+            $diAbsolute = realpath($baseDir . DIRECTORY_SEPARATOR . $diRelative);
         } else {
             $diAbsolute = null;
         }
