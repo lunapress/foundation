@@ -7,6 +7,7 @@ use LunaPress\FoundationContracts\Composer\IComposerManager;
 use Override;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionProperty;
 use RuntimeException;
 
 defined('ABSPATH') || exit;
@@ -29,7 +30,7 @@ class ComposerManager implements IComposerManager
     #[Override]
     public function getCurrentLoaderPath(): string
     {
-        if (is_null($this->loaderPath)) {
+        if (!is_null($this->loaderPath)) {
             return $this->loaderPath;
         }
 
@@ -48,7 +49,12 @@ class ComposerManager implements IComposerManager
 
             $found = $loader->findFile($this->anchorClass);
             if ($found && realpath($found) === $anchorFile) {
-                $this->loaderPath = (new ReflectionClass($loader))->getFileName();
+                $vendorDir = (new ReflectionProperty($loader, 'vendorDir'))->getValue($loader);
+                if (!is_string($vendorDir)) {
+                    continue;
+                }
+
+                $this->loaderPath = $vendorDir . DIRECTORY_SEPARATOR . 'composer';
 
                 return $this->loaderPath;
             }
@@ -68,7 +74,7 @@ class ComposerManager implements IComposerManager
             return $this->installedJson;
         }
 
-        $json = dirname($this->getCurrentLoaderPath()) . '/installed.json';
+        $json = $this->getCurrentLoaderPath() . '/installed.json';
         if (!is_file($json)) {
             $this->installedJson = [];
             return $this->installedJson;
@@ -108,7 +114,7 @@ class ComposerManager implements IComposerManager
      */
     private function loadInstalledPhp(): array
     {
-        $path = dirname($this->getCurrentLoaderPath()) . '/installed.php';
+        $path = $this->getCurrentLoaderPath() . '/installed.php';
         return is_file($path) ? (require $path) : [];
     }
 }
