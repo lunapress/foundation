@@ -7,6 +7,6 @@ use LunaPress\FoundationContracts\Subscriber\ActionSubscriber;
 
 defined('ABSPATH') || exit;
 
-abstract class AbstractActionSubscriber extends AbstractSubscriber implements ActionSubscriber
+abstract readonly class AbstractActionSubscriber extends AbstractSubscriber implements ActionSubscriber
 {
 }

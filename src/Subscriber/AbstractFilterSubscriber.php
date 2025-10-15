@@ -7,6 +7,6 @@ use LunaPress\FoundationContracts\Subscriber\FilterSubscriber;
 
 defined('ABSPATH') || exit;
 
-abstract class AbstractFilterSubscriber extends AbstractSubscriber implements FilterSubscriber
+abstract readonly class AbstractFilterSubscriber extends AbstractSubscriber implements FilterSubscriber
 {
 }

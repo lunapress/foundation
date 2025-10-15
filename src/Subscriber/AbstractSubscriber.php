@@ -8,7 +8,7 @@ use LunaPress\FoundationContracts\Subscriber\Subscriber;
 
 defined('ABSPATH') || exit;
 
-abstract class AbstractSubscriber implements Subscriber
+abstract readonly class AbstractSubscriber implements Subscriber
 {
     public function callback(): callable
     {
